@@ -1,19 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Exiled.API.Enums;
 using Exiled.API.Features;
+using Exiled.API.Features.Items;
 using Exiled.API.Interfaces;
 using Exiled.Events.EventArgs.Player;
-using Exiled.API.Enums;
-using Exiled.API.Features.Items;
 
 namespace RemoteKeycard
 {
     public class Config : IConfig
     {
-        public bool IsEnabled { get; set; } = true;
-        public bool Debug { get; set; } = true;
         public bool RequireKeycard { get; set; } = true;
+
         public List<string> DisabledRoles { get; set; } = new List<string>
         {
             "Scp049",
@@ -25,11 +24,13 @@ namespace RemoteKeycard
             "Scp939",
             "Scp3114"
         }; // SCP roles
+
+        public bool IsEnabled { get; set; } = true;
+        public bool Debug { get; set; } = false;
     }
 
     public class RemoteKeycard : Plugin<Config>
     {
-
         public override string Name => "RemoteKeycard";
         public override string Author => "NotKeira";
         public override Version Version => new Version(1, 0, 0);
@@ -109,7 +110,6 @@ namespace RemoteKeycard
                 Log.Debug("No permissions required.");
                 return false;
             }
-
 
 
             if (HasRequiredPermissions(player.CurrentItem, requiredPermissions))
