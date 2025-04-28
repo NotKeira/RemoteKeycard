@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Exiled.API.Enums;
 using Exiled.API.Features;
@@ -12,19 +11,6 @@ namespace RemoteKeycard
     public class Config : IConfig
     {
         public bool RequireKeycard { get; set; } = true;
-
-        public List<string> DisabledRoles { get; set; } = new List<string>
-        {
-            "Scp049",
-            "Scp079",
-            "Scp096",
-            "Scp106",
-            "Scp173",
-            "Scp0492",
-            "Scp939",
-            "Scp3114"
-        }; // SCP roles
-
         public bool IsEnabled { get; set; } = true;
         public bool Debug { get; set; } = false;
     }
@@ -99,7 +85,7 @@ namespace RemoteKeycard
                 return false;
             }
 
-            if (Config.DisabledRoles.Contains(player.Role.Name))
+            if (player.IsScp)
             {
                 Log.Debug($"Player role {player.Role.Name} is disabled.");
                 return false;
