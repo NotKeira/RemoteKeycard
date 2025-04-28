@@ -49,61 +49,27 @@ namespace RemoteKeycard
 
         private void OnInteractingDoor(InteractingDoorEventArgs ev)
         {
-            Log.Debug($"Interacting door: {ev.Door} {ev.IsAllowed}");
             if (ev.IsAllowed) return;
-            var shouldAllow = CheckPermissions(ev.Player, ev.Door.KeycardPermissions);
-            if (!shouldAllow) return;
-            ev.IsAllowed = true;
-            Log.Debug($"Door interaction allowed for {ev.Player.Nickname}");
+            ev.IsAllowed = CheckPermissions(ev.Player, ev.Door.KeycardPermissions);
         }
 
         private void OnInteractingLocker(InteractingLockerEventArgs ev)
         {
             if (ev.IsAllowed) return;
-            var shouldAllow = CheckPermissions(ev.Player, ev.InteractingChamber.RequiredPermissions);
-            if (!shouldAllow) return;
-            ev.IsAllowed = true;
-            Log.Debug($"Locker interaction allowed for {ev.Player.Nickname}");
+            ev.IsAllowed = CheckPermissions(ev.Player, ev.InteractingChamber.RequiredPermissions);
         }
 
         private void OnOpeningGenerator(UnlockingGeneratorEventArgs ev)
         {
             if (ev.IsAllowed) return;
-            var shouldAllow = CheckPermissions(ev.Player, (KeycardPermissions)2); // 2 = Scientist keycard level
-            if (!shouldAllow) return;
-            ev.IsAllowed = true;
-            Log.Debug($"Generator interaction allowed for {ev.Player.Nickname}");
+            ev.IsAllowed = CheckPermissions(ev.Player, ev.Generator.KeycardPermissions);
         }
 
         private bool CheckPermissions(Player player, KeycardPermissions requiredPermissions)
         {
-            Log.Debug($"Checking permissions for {player.Nickname} using {requiredPermissions}");
-
-            if (!player.IsAlive)
-            {
-                Log.Debug("Player is either null or not alive.");
-                return false;
-            }
-
-            if (player.IsScp)
-            {
-                Log.Debug($"Player role {player.Role.Name} is disabled.");
-                return false;
-            }
-
-            if (requiredPermissions == 0)
-            {
-                Log.Debug("No permissions required.");
-                return false;
-            }
-
-
-            if (HasRequiredPermissions(player.CurrentItem, requiredPermissions))
-                return false;
-            if (Config.RequireKeycard && !HasKeycardInInventory(player, requiredPermissions))
-                return false;
-
-
+            if (player.IsScp || !player.IsAlive || requiredPermissions == 0 ||
+                HasRequiredPermissions(player.CurrentItem, requiredPermissions) ||
+                Config.RequireKeycard && !HasKeycardInInventory(player, requiredPermissions)) return false;
             if (Config.Debug)
             {
                 Log.Debug(
@@ -116,13 +82,11 @@ namespace RemoteKeycard
         private static bool HasRequiredPermissions(Item item, KeycardPermissions requiredPermissions)
         {
             if (item == null || !item.IsKeycard) return false;
-            Log.Debug($"Checking item {item}");
             var validItem = (Keycard)item;
-            Log.Debug($"Item {item} exports {(validItem.Permissions & requiredPermissions) != 0}");
             return (validItem.Permissions & requiredPermissions) != 0;
         }
 
-        private bool HasKeycardInInventory(Player player, KeycardPermissions requiredPermissions)
+        private static bool HasKeycardInInventory(Player player, KeycardPermissions requiredPermissions)
         {
             return player.Items.Any(item => HasRequiredPermissions(item, requiredPermissions));
         }
