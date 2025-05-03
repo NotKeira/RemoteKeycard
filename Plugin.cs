@@ -1,11 +1,11 @@
-using System;
-using System.Linq;
 using Exiled.API.Enums;
 using Exiled.API.Extensions;
 using Exiled.API.Features;
+using Exiled.API.Features.Doors;
 using Exiled.API.Features.Items;
 using Exiled.API.Interfaces;
 using Exiled.Events.EventArgs.Player;
+using Interactables.Interobjects.DoorUtils;
 
 namespace RemoteKeycard
 {
@@ -51,7 +51,8 @@ namespace RemoteKeycard
         {
             if (ev.IsAllowed) return;
             if (ev.Door.IsLocked) return;
-            ev.IsAllowed = TryGetValidKeycard(ev.Player, ev.Door.KeycardPermissions, out Keycard keycard);
+            ev.IsAllowed = TryGetValidKeycard(ev.Player, ev.Door, out Keycard keycard);
+            if (keycard == null) return;
             if (ev.Door.Type is DoorType.GateA or DoorType.GateB && keycard.Type == ItemType.SurfaceAccessPass)
             {
                 ev.Player.RemoveItem(keycard);
@@ -78,6 +79,18 @@ namespace RemoteKeycard
         private static bool TryGetValidKeycard(Player player, KeycardPermissions permissions, out Keycard keycard)
         {
             keycard = player.Items.FirstOrDefault(item => item is Keycard kc && kc.Permissions.HasFlagFast(permissions))?.As<Keycard>();
+            return keycard != null;
+        }
+
+        private static bool TryGetValidKeycard(Player player, Door door, out Keycard keycard)
+        {
+            if (door.Base is not IDoorPermissionRequester doorPermissionRequester)
+            {
+                keycard = null;
+                return false;
+            }
+
+            keycard = player.Items.FirstOrDefault(item => item.Base is IDoorPermissionProvider provider && doorPermissionRequester.PermissionsPolicy.CheckPermissions(provider.GetPermissions(doorPermissionRequester)))?.As<Keycard>();
             return keycard != null;
         }
     }
