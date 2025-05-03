@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Exiled.API.Enums;
+using Exiled.API.Extensions;
 using Exiled.API.Features;
 using Exiled.API.Features.Items;
 using Exiled.API.Interfaces;
@@ -10,7 +11,6 @@ namespace RemoteKeycard
 {
     public class Config : IConfig
     {
-        public bool RequireKeycard { get; set; } = true;
         public bool IsEnabled { get; set; } = true;
         public bool Debug { get; set; } = false;
     }
@@ -47,48 +47,28 @@ namespace RemoteKeycard
             Exiled.Events.Handlers.Player.UnlockingGenerator -= OnOpeningGenerator;
         }
 
-        private void OnInteractingDoor(InteractingDoorEventArgs ev)
+        private static void OnInteractingDoor(InteractingDoorEventArgs ev)
         {
             if (ev.IsAllowed) return;
-            ev.IsAllowed = CheckPermissions(ev.Player, ev.Door.KeycardPermissions);
+            if (ev.Door.IsLocked) return;
+            ev.IsAllowed = HasValidKeycard(ev.Player, ev.Door.KeycardPermissions);
         }
 
-        private void OnInteractingLocker(InteractingLockerEventArgs ev)
+        private static void OnInteractingLocker(InteractingLockerEventArgs ev)
         {
             if (ev.IsAllowed) return;
-            ev.IsAllowed = CheckPermissions(ev.Player, ev.InteractingChamber.RequiredPermissions);
+            ev.IsAllowed = HasValidKeycard(ev.Player, ev.InteractingChamber.RequiredPermissions);
         }
 
-        private void OnOpeningGenerator(UnlockingGeneratorEventArgs ev)
+        private static void OnOpeningGenerator(UnlockingGeneratorEventArgs ev)
         {
             if (ev.IsAllowed) return;
-            ev.IsAllowed = CheckPermissions(ev.Player, ev.Generator.KeycardPermissions);
+            ev.IsAllowed = HasValidKeycard(ev.Player, ev.Generator.KeycardPermissions);
         }
 
-        private bool CheckPermissions(Player player, KeycardPermissions requiredPermissions)
+        private static bool HasValidKeycard(Player player, KeycardPermissions permissions)
         {
-            if (player.IsScp || !player.IsAlive || requiredPermissions == 0 ||
-                HasRequiredPermissions(player.CurrentItem, requiredPermissions) ||
-                Config.RequireKeycard && !HasKeycardInInventory(player, requiredPermissions)) return false;
-            if (Config.Debug)
-            {
-                Log.Debug(
-                    $"Player {player.Nickname} used remote keycard access for permission level {requiredPermissions}");
-            }
-
-            return true;
-        }
-
-        private static bool HasRequiredPermissions(Item item, KeycardPermissions requiredPermissions)
-        {
-            if (item == null || !item.IsKeycard) return false;
-            var validItem = (Keycard)item;
-            return (validItem.Permissions & requiredPermissions) != 0;
-        }
-
-        private static bool HasKeycardInInventory(Player player, KeycardPermissions requiredPermissions)
-        {
-            return player.Items.Any(item => HasRequiredPermissions(item, requiredPermissions));
+            return player.Items.Any(item => item is Keycard kc && kc.Permissions.HasFlagFast(permissions));
         }
     }
 }
