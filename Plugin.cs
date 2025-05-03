@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Exiled.API.Enums;
 using Exiled.API.Features;
 using Exiled.API.Features.Items;
@@ -49,6 +48,7 @@ namespace RemoteKeycard
 
         private void OnInteractingDoor(InteractingDoorEventArgs ev)
         {
+            if (ev.Door.IsLocked) return;
             if (ev.IsAllowed) return;
             ev.IsAllowed = CheckPermissions(ev.Player, ev.Door.KeycardPermissions);
         }
@@ -67,16 +67,27 @@ namespace RemoteKeycard
 
         private bool CheckPermissions(Player player, KeycardPermissions requiredPermissions)
         {
-            if (player.IsScp || !player.IsAlive || requiredPermissions == 0 ||
-                HasRequiredPermissions(player.CurrentItem, requiredPermissions) ||
-                Config.RequireKeycard && !HasKeycardInInventory(player, requiredPermissions)) return false;
-            if (Config.Debug)
+            if (player.IsScp || !player.IsAlive || requiredPermissions == 0)
+                return false;
+
+            if (HasRequiredPermissions(player.CurrentItem, requiredPermissions))
+                return true;
+
+            foreach (var item in player.Items)
             {
-                Log.Debug(
-                    $"Player {player.Nickname} used remote keycard access for permission level {requiredPermissions}");
+                if (!HasRequiredPermissions(item, requiredPermissions)) continue;
+                if (item.Type == ItemType.SurfaceAccessPass)
+                    player.RemoveItem(item);
+                if (Config.Debug)
+                {
+                    Log.Debug(
+                        $"Player {player.Nickname} used remote keycard access for permission level {requiredPermissions}");
+                }
+
+                return true;
             }
 
-            return true;
+            return !Config.RequireKeycard;
         }
 
         private static bool HasRequiredPermissions(Item item, KeycardPermissions requiredPermissions)
@@ -84,11 +95,6 @@ namespace RemoteKeycard
             if (item == null || !item.IsKeycard) return false;
             var validItem = (Keycard)item;
             return (validItem.Permissions & requiredPermissions) != 0;
-        }
-
-        private static bool HasKeycardInInventory(Player player, KeycardPermissions requiredPermissions)
-        {
-            return player.Items.Any(item => HasRequiredPermissions(item, requiredPermissions));
         }
     }
 }

@@ -34,8 +34,9 @@
     </PropertyGroup>
     <ItemGroup>
         <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>packages\EXILED.9.0.0-beta.5\lib\net48\Assembly-CSharp-Publicized.dll</HintPath>
+            <HintPath>packages\ExMod.Exiled.9.6.0-beta7\lib\net48\Assembly-CSharp-Publicized.dll</HintPath>
         </Reference>
+
         <Reference Include="CommandSystem.Core, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
           <HintPath>packages\ExMod.Exiled.9.6.0-beta7\lib\net48\CommandSystem.Core.dll</HintPath>
         </Reference>
