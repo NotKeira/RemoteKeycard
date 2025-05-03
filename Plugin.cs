@@ -51,7 +51,11 @@ namespace RemoteKeycard
         {
             if (ev.IsAllowed) return;
             if (ev.Door.IsLocked) return;
-            ev.IsAllowed = HasValidKeycard(ev.Player, ev.Door.KeycardPermissions);
+            ev.IsAllowed = TryGetValidKeycard(ev.Player, ev.Door.KeycardPermissions, out Keycard keycard);
+            if (ev.Door.Type is DoorType.GateA or DoorType.GateB && keycard.Type == ItemType.SurfaceAccessPass)
+            {
+                ev.Player.RemoveItem(keycard);
+            }
         }
 
         private static void OnInteractingLocker(InteractingLockerEventArgs ev)
@@ -68,7 +72,13 @@ namespace RemoteKeycard
 
         private static bool HasValidKeycard(Player player, KeycardPermissions permissions)
         {
-            return player.Items.Any(item => item is Keycard kc && kc.Permissions.HasFlagFast(permissions));
+            return TryGetValidKeycard(player, permissions, out _);
+        }
+
+        private static bool TryGetValidKeycard(Player player, KeycardPermissions permissions, out Keycard keycard)
+        {
+            keycard = player.Items.FirstOrDefault(item => item is Keycard kc && kc.Permissions.HasFlagFast(permissions))?.As<Keycard>();
+            return keycard != null;
         }
     }
 }
