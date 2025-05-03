@@ -1,5 +1,6 @@
 using System;
 using Exiled.API.Enums;
+using Exiled.API.Extensions;
 using Exiled.API.Features;
 using Exiled.API.Features.Items;
 using Exiled.API.Interfaces;
@@ -9,7 +10,6 @@ namespace RemoteKeycard
 {
     public class Config : IConfig
     {
-        public bool RequireKeycard { get; set; } = true;
         public bool IsEnabled { get; set; } = true;
         public bool Debug { get; set; } = false;
     }
@@ -46,55 +46,40 @@ namespace RemoteKeycard
             Exiled.Events.Handlers.Player.UnlockingGenerator -= OnOpeningGenerator;
         }
 
-        private void OnInteractingDoor(InteractingDoorEventArgs ev)
+        private static void OnInteractingDoor(InteractingDoorEventArgs ev)
         {
             if (ev.Door.IsLocked) return;
             if (ev.IsAllowed) return;
-            ev.IsAllowed = CheckPermissions(ev.Player, ev.Door.KeycardPermissions);
-        }
-
-        private void OnInteractingLocker(InteractingLockerEventArgs ev)
-        {
-            if (ev.IsAllowed) return;
-            ev.IsAllowed = CheckPermissions(ev.Player, ev.InteractingChamber.RequiredPermissions);
-        }
-
-        private void OnOpeningGenerator(UnlockingGeneratorEventArgs ev)
-        {
-            if (ev.IsAllowed) return;
-            ev.IsAllowed = CheckPermissions(ev.Player, ev.Generator.KeycardPermissions);
-        }
-
-        private bool CheckPermissions(Player player, KeycardPermissions requiredPermissions)
-        {
-            if (player.IsScp || !player.IsAlive || requiredPermissions == 0)
-                return false;
-
-            if (HasRequiredPermissions(player.CurrentItem, requiredPermissions))
-                return true;
-
-            foreach (var item in player.Items)
+            if (ev.Door.IsLocked) return;
+            ev.IsAllowed = TryGetValidKeycard(ev.Player, ev.Door.KeycardPermissions, out Keycard keycard);
+            if (ev.Door.Type is DoorType.GateA or DoorType.GateB && keycard.Type == ItemType.SurfaceAccessPass)
             {
-                if (!HasRequiredPermissions(item, requiredPermissions)) continue;
-                if (item.Type == ItemType.SurfaceAccessPass)
-                    player.RemoveItem(item);
-                if (Config.Debug)
-                {
-                    Log.Debug(
-                        $"Player {player.Nickname} used remote keycard access for permission level {requiredPermissions}");
-                }
-
-                return true;
+                ev.Player.RemoveItem(keycard);
             }
-
-            return !Config.RequireKeycard;
         }
 
-        private static bool HasRequiredPermissions(Item item, KeycardPermissions requiredPermissions)
+        private static void OnInteractingLocker(InteractingLockerEventArgs ev)
         {
-            if (item == null || !item.IsKeycard) return false;
-            var validItem = (Keycard)item;
-            return (validItem.Permissions & requiredPermissions) != 0;
+            if (ev.IsAllowed) return;
+            ev.IsAllowed = HasValidKeycard(ev.Player, ev.InteractingChamber.RequiredPermissions);
+        }
+
+        private static void OnOpeningGenerator(UnlockingGeneratorEventArgs ev)
+        {
+            if (ev.IsAllowed) return;
+            ev.IsAllowed = HasValidKeycard(ev.Player, ev.Generator.KeycardPermissions);
+
+        }
+
+        private static bool HasValidKeycard(Player player, KeycardPermissions permissions)
+        {
+            return TryGetValidKeycard(player, permissions, out _);
+        }
+ 
+        private static bool TryGetValidKeycard(Player player, KeycardPermissions permissions, out Keycard keycard)
+        {
+            keycard = player.Items.FirstOrDefault(item => item is Keycard kc && kc.Permissions.HasFlagFast(permissions))?.As<Keycard>();
+            return keycard != null;
         }
     }
 }
