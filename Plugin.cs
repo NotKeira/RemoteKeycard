@@ -49,6 +49,7 @@ namespace RemoteKeycard
 
         private static void OnInteractingDoor(InteractingDoorEventArgs ev)
         {
+            if (ev.Door.IsLocked) return;
             if (ev.IsAllowed) return;
             if (ev.Door.IsLocked) return;
             ev.IsAllowed = TryGetValidKeycard(ev.Player, ev.Door, out Keycard keycard);
@@ -69,13 +70,14 @@ namespace RemoteKeycard
         {
             if (ev.IsAllowed) return;
             ev.IsAllowed = HasValidKeycard(ev.Player, ev.Generator.KeycardPermissions);
+
         }
 
         private static bool HasValidKeycard(Player player, KeycardPermissions permissions)
         {
             return TryGetValidKeycard(player, permissions, out _);
         }
-
+ 
         private static bool TryGetValidKeycard(Player player, KeycardPermissions permissions, out Keycard keycard)
         {
             keycard = player.Items.FirstOrDefault(item => item is Keycard kc && kc.Permissions.HasFlagFast(permissions))?.As<Keycard>();
